@@ -55,7 +55,7 @@ while true do
             local itema = invcont.getStackInInternalSlot(1)
             local itemb = invcont.getStackInInternalSlot(2)
             local itemc = invcont.getStackInInternalSlot(3)
-            while itema.size < tonumber(nowmon[itema.name]) or itemb.size < tonumber(nowmon[itemb.name]) or itemc.size < tonumber(nowmon[itemc.name]) or itema.size == tonumber(nowmon[itema.name]) or itemb.size == tonumber(nowmon[itemb.name]) or itemc.size == tonumber(nowmon[itemc.name]) do
+            while itema.size < tonumber(nowmon[itema.name]) and itemb.size < tonumber(nowmon[itemb.name]) and itemc.size < tonumber(nowmon[itemc.name]) and itema.size == tonumber(nowmon[itema.name]) and itemb.size == tonumber(nowmon[itemb.name]) and itemc.size == tonumber(nowmon[itemc.name]) do
                 bot.select(1)
                 bot.suck(sides.forward)
                 os.sleep(1)
