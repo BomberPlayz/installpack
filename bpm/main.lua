@@ -34,7 +34,7 @@ function status(info, text)
     gpu.setForeground(0xffffff)
     io.write(statusCursors[statusNow].." ")
     gpu.setBackground(0xAAAAAA)
-    io.write((debug.getinfo(3).name or "Unknown"))
+    io.write((debug.getinfo(4).name or "Unknown"))
     gpu.setForeground(bf)
     gpu.setBackground(bg)
     io.write("   ")
@@ -61,6 +61,9 @@ end
 function checkPackagePath(name)
     status("info","Checking package path of package name '"..name.."'")
     local ret,a = ser.unserialize(getFullData(path.."packages.cfg"))
+    if not ret[name].name then
+        ret[name].name = "Unknown"
+    end
     status("warn",a or "no")
     if ret[name] then
         status("info","check complete, Package path is: "..ret[name].path)
@@ -92,7 +95,6 @@ function getDeps(pcktbl)
         ret[i].name = i
         ret[i].path = checkPackagePath(i).path
     end
-    status("info","Getting dependencies complete.")
     return ret
 end
 
@@ -132,6 +134,28 @@ if args[1] == "update" then
     if patha ~= "err_no" then
         local packageData = getTableData(patha.path.."/package_info.cfg")
         -- status("warn",ser.serialize(packageData))
+
+
+        local deps = getDeps(packageData)
+        for k,v in pairs(deps) do
+            local depPkg = getTableData(v.path.."/package_info.cfg")
+            for k,v in pairs(depPkg.files) do
+                local toupgrade = true
+                if fs.exists(path..depPkg.path.."/"..k) then
+                    local file = fs.open(path..depPkg.path.."/"..k)
+                    local fileData = file:read(math.huge)
+                    if fileData == getFullData(v) then
+                        toupgrade = false
+                    end
+                else
+                    toupgrade = true
+                end
+                if toupgrade then
+                    install(path..depPkg.path.."/"..k,packageData.files[k])
+                end
+            end
+        end
+
         for k,v in pairs(packageData.files) do
             local toupgrade = true
             if fs.exists(path..patha.path.."/"..k) then
