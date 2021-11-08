@@ -30,9 +30,13 @@ function status(info, text)
     gpu.fill(0,scy,rx,1, " ")
     term.setCursor(scx,scy)
     local bf = gpu.getForeground()
+    local bg = gpu.getBackground()
     gpu.setForeground(0xffffff)
     io.write(statusCursors[statusNow].." ")
+    gpu.setBackground(0xAAAAAA)
+    io.write((debug.getinfo(2).name or "Unknown").."   ")
     gpu.setForeground(bf)
+    gpu.setBackground(bg)
 
     statusNow = statusNow+1
     if statusNow > #statusCursors then statusNow = 1 end
@@ -77,6 +81,20 @@ function getTableData(file)
 
 end
 
+function getDeps(pcktbl)
+    status("info","Getting dependencies for package '"..pcktbl.name.."'")
+    local ret = {}
+    if not pcktbl.dependency then return ret end
+    for i,v in pairs(pcktbl.dependency) do
+        status("info","Indexing dependency '"..v.."'")
+        ret[i] = {}
+        ret[i].name = i
+        ret[i].path = checkPackagePath(i).path
+    end
+    status("info","Getting dependencies complete.")
+    return ret
+end
+
 function install(url,loc)
     status("info","Installing '"..url.."' to '"..loc.."'")
     local fileData = getFullData(url)
@@ -85,12 +103,21 @@ function install(url,loc)
     handle:close()
 end
 
+
+
 if args[1] == "install" then
     local patha = checkPackagePath(args[2])
     -- status("warn","dumped: "..ser.serialize(patha))
     if patha ~= "err_no" then
         local packageData = getTableData(patha.path.."/package_info.cfg")
         -- status("warn",ser.serialize(packageData))
+        local deps = getDeps(packageData)
+        for k,v in pairs(deps) do
+            local depPkg = getTableData(v.path.."/package_info.cfg")
+            for k,v in pairs(depPkg.files) do
+                install(path..depPkg.path.."/"..k,packageData.files[k])
+            end
+        end
         for k,v in pairs(packageData.files) do
             install(path..patha.path.."/"..k,packageData.files[k])
         end
