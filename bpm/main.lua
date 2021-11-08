@@ -61,9 +61,7 @@ end
 function checkPackagePath(name)
     status("info","Checking package path of package name '"..name.."'")
     local ret,a = ser.unserialize(getFullData(path.."packages.cfg"))
-    if not ret[name].name then
-        ret[name].name = "Unknown"
-    end
+
     status("warn",a or "no")
     if ret[name] then
         status("info","check complete, Package path is: "..ret[name].path)
@@ -86,7 +84,7 @@ function getTableData(file)
 end
 
 function getDeps(pcktbl)
-    status("info","Getting dependencies for package '"..pcktbl.name.."'")
+    status("info","Getting dependencies for package "..(pcktbl.name or "Unknown").."")
     local ret = {}
     if not pcktbl.dependency then return ret end
     for i,v in pairs(pcktbl.dependency) do
