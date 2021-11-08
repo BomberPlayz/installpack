@@ -34,9 +34,10 @@ function status(info, text)
     gpu.setForeground(0xffffff)
     io.write(statusCursors[statusNow].." ")
     gpu.setBackground(0xAAAAAA)
-    io.write((debug.getinfo(2).name or "Unknown").."   ")
+    io.write((debug.getinfo(3).name or "Unknown"))
     gpu.setForeground(bf)
     gpu.setBackground(bg)
+    io.write("   ")
 
     statusNow = statusNow+1
     if statusNow > #statusCursors then statusNow = 1 end
