@@ -27,7 +27,8 @@ function status(info, text)
         _msg = "[INFO] > ".._msg
     end
     local rx,ry = gpu.getResolution()
-    gpu.fill(0,scy,rx,1, " ")
+    gpu.fill(1,scy,rx,2, " ")
+
     term.setCursor(scx,scy)
     local bf = gpu.getForeground()
     local bg = gpu.getBackground()
@@ -59,7 +60,7 @@ function getFullData(url)
 end
 
 function checkPackagePath(name)
-    status("info","Checking package path of package name '"..name.."'")
+    status("info","Checking package path of package "..name.."")
     local ret,a = ser.unserialize(getFullData(path.."packages.cfg"))
 
     status("warn",a or "no")
