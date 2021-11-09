@@ -43,7 +43,8 @@ function status(info, text)
     statusNow = statusNow+1
     if statusNow > #statusCursors then statusNow = 1 end
 
-    print(_msg)
+    print(_msg);--scx, scy = term.getCursor()
+    --os.sleep(1)
 end
 
 function getFullData(url)
@@ -52,7 +53,7 @@ function getFullData(url)
     status("info","Fetching data from "..url)
     for chunk in internet.request(url) do
         i = i+1
-        --status("info","Received data chunk "..i)
+        status("info","Received data chunk #"..i)
         data = data..chunk
     end
     --status("info","getFullData ended.")
@@ -87,12 +88,15 @@ end
 function getDeps(pcktbl)
     status("info","Getting dependencies for package "..(pcktbl.name or "Unknown").."")
     local ret = {}
-    if not pcktbl.dependency then return ret end
+    if not pcktbl.dependency then
+        status("info","No dependencies found.")
+        return ret
+    end
     for i,v in pairs(pcktbl.dependency) do
         status("info","Indexing dependency '"..v.."'")
         ret[i] = {}
-        ret[i].name = i
-        ret[i].path = checkPackagePath(i).path
+        ret[i].name = v
+        ret[i].path = checkPackagePath(v).path
     end
     return ret
 end
@@ -115,13 +119,17 @@ if args[1] == "install" then
         -- status("warn",ser.serialize(packageData))
         local deps = getDeps(packageData)
         for k,v in pairs(deps) do
-            local depPkg = getTableData(v.path.."/package_info.cfg")
-            for k,v in pairs(depPkg.files) do
-                install(path..depPkg.path.."/"..k,packageData.files[k])
+            if deps[k].path then
+                local depPkg = getTableData(deps[k].path.."/package_info.cfg")
+                for kk,vv in pairs(depPkg.files) do
+                    install(path..deps[k].path.."/"..kk,depPkg.files[kk])
+                end
+            else
+                status("error","Dependency '"..deps[k].name.."' not found.")
             end
         end
-        for k,v in pairs(packageData.files) do
-            install(path..patha.path.."/"..k,packageData.files[k])
+        for kk,vv in pairs(packageData.files) do
+            install(path..patha.path.."/"..kk,packageData.files[kk])
         end
         status("info","Install complete!")
     end
@@ -137,21 +145,27 @@ if args[1] == "update" then
 
         local deps = getDeps(packageData)
         for k,v in pairs(deps) do
-            local depPkg = getTableData(v.path.."/package_info.cfg")
-            for k,v in pairs(depPkg.files) do
-                local toupgrade = true
-                if fs.exists(path..depPkg.path.."/"..k) then
-                    local file = fs.open(path..depPkg.path.."/"..k)
-                    local fileData = file:read(math.huge)
-                    if fileData == getFullData(v) then
-                        toupgrade = false
+            if deps[k].path then
+                local depPkg = getTableData(deps[k].path.."/package_info.cfg")
+                --print(depPkg)
+
+                for kk,vv in pairs(depPkg.files) do
+                    local toupgrade = true
+                    if fs.exists(path..deps[k].path.."/"..kk) then
+                        local file = fs.open(path..depPkg.path.."/"..kk)
+                        local fileData = file:read(math.huge)
+                        if fileData == getFullData(deps[k].name) then
+                            toupgrade = false
+                        end
+                    else
+                        toupgrade = true
                     end
-                else
-                    toupgrade = true
+                    if toupgrade then
+                        install(path..deps[k].path.."/"..kk,depPkg.files[kk])
+                    end
                 end
-                if toupgrade then
-                    install(path..depPkg.path.."/"..k,packageData.files[k])
-                end
+            else
+                status("error","Dependency '"..deps[k].name.."' not found.")
             end
         end
 
