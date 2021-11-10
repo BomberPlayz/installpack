@@ -40,3 +40,5 @@ function class(classname, super)
 
     return c
 end
+
+return class
