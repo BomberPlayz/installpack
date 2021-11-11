@@ -6,12 +6,15 @@ local args, options = require("shell").parse(...)
 local ser = require("serialization")
 local term = require("term")
 
+local w,h = gpu.getResolution()
+
 local path = "https://raw.githubusercontent.com/BomberPlayz/installpack/main/"
 
 local statusCursors = {"|","/","-","\\"}
 local statusNow = 1
 
 local scx, scy = term.getCursor()
+scx = 1
 
 function status(info, text)
     local _msg = text
@@ -25,14 +28,39 @@ function status(info, text)
     elseif info == "info" then
         gpu.setForeground(0x0000FF)
         _msg = "[INFO] > ".._msg
+    elseif info == "notice" then
+        gpu.setForeground(0x5555FF)
+        _msg = "[NOTICE] > ".._msg
     end
     local rx,ry = gpu.getResolution()
     gpu.fill(1,scy,rx,2, " ")
+   -- print("")
+    if info ~= "info" then
+        scx, scy = term.getCursor()
+        scx = 1
+        if scy < h then
+            scy = scy + 1
+        end
+        term.setCursor(scx,scy-1)
+        local bf = gpu.getForeground()
+        local bg = gpu.getBackground()
+        gpu.setBackground(0xAAAAAA)
+        io.write((debug.getinfo(4).name or "Unknown"))
+        gpu.setForeground(bf)
+        gpu.setBackground(bg)
+        io.write("   ")
+        print(_msg);
+    end
+
+
 
     term.setCursor(scx,scy)
-    local bf = gpu.getForeground()
-    local bg = gpu.getBackground()
+     bf = gpu.getForeground()
+     bg = gpu.getBackground()
     gpu.setForeground(0xffffff)
+
+
+
     io.write(statusCursors[statusNow].." ")
     gpu.setBackground(0xAAAAAA)
     io.write((debug.getinfo(4).name or "Unknown"))
@@ -40,10 +68,13 @@ function status(info, text)
     gpu.setBackground(bg)
     io.write("   ")
 
+
+
     statusNow = statusNow+1
     if statusNow > #statusCursors then statusNow = 1 end
 
-    print(_msg);--scx, scy = term.getCursor()
+    io.write(_msg);--scx, scy = term.getCursor()
+
     --os.sleep(1)
 end
 
@@ -64,12 +95,11 @@ function checkPackagePath(name)
     status("info","Checking package path of package "..name.."")
     local ret,a = ser.unserialize(getFullData(path.."packages.cfg"))
 
-    status("warn",a or "no")
     if ret[name] then
-        status("info","check complete, Package path is: "..ret[name].path)
+        status("info","Package path of "..name.." is: "..ret[name].path)
         return ret[name]
     else
-        status("info","check complete, package was not found.")
+        status("warn","check complete, package "..name.." was not found.")
         return "err_no"
     end
 
@@ -109,21 +139,24 @@ function install(url,loc)
     handle:close()
 end
 
-
-
-if args[1] == "install" then
-    local patha = checkPackagePath(args[2])
+function installPackage(name)
+    local patha = checkPackagePath(name)
     -- status("warn","dumped: "..ser.serialize(patha))
     if patha ~= "err_no" then
         local packageData = getTableData(patha.path.."/package_info.cfg")
+        if packageData.authors then
+            local msg = "Authors of package "..name..": "
+            for k,v in pairs(packageData.authors) do
+                msg = msg..v..", "
+            end
+            status("notice", msg)
+        end
         -- status("warn",ser.serialize(packageData))
         local deps = getDeps(packageData)
         for k,v in pairs(deps) do
             if deps[k].path then
-                local depPkg = getTableData(deps[k].path.."/package_info.cfg")
-                for kk,vv in pairs(depPkg.files) do
-                    install(path..deps[k].path.."/"..kk,depPkg.files[kk])
-                end
+                installPackage(deps[k].name)
+
             else
                 status("error","Dependency '"..deps[k].name.."' not found.")
             end
@@ -135,35 +168,26 @@ if args[1] == "install" then
     end
 end
 
-if args[1] == "update" then
-    local patha = checkPackagePath(args[2])
+
+function updatePackage(name)
+    local patha = checkPackagePath(name)
     -- status("warn","dumped: "..ser.serialize(patha))
     if patha ~= "err_no" then
         local packageData = getTableData(patha.path.."/package_info.cfg")
+        if packageData.authors then
+            local msg = "Authors of package "..name..": "
+            for k,v in pairs(packageData.authors) do
+                msg = msg..v..", "
+            end
+            status("notice", msg)
+        end
         -- status("warn",ser.serialize(packageData))
 
 
         local deps = getDeps(packageData)
         for k,v in pairs(deps) do
             if deps[k].path then
-                local depPkg = getTableData(deps[k].path.."/package_info.cfg")
-                --print(depPkg)
-
-                for kk,vv in pairs(depPkg.files) do
-                    local toupgrade = true
-                    if fs.exists(path..deps[k].path.."/"..kk) then
-                        local file = fs.open(path..depPkg.path.."/"..kk)
-                        local fileData = file:read(math.huge)
-                        if fileData == getFullData(deps[k].name) then
-                            toupgrade = false
-                        end
-                    else
-                        toupgrade = true
-                    end
-                    if toupgrade then
-                        install(path..deps[k].path.."/"..kk,depPkg.files[kk])
-                    end
-                end
+                updatePackage(deps[k].name)
             else
                 status("error","Dependency '"..deps[k].name.."' not found.")
             end
@@ -187,4 +211,12 @@ if args[1] == "update" then
         end
         status("info","Update complete!")
     end
+end
+
+if args[1] == "install" then
+    installPackage(args[2])
+end
+
+if args[1] == "update" then
+    updatePackage(args[2])
 end
