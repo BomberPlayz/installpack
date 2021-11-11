@@ -50,6 +50,7 @@ function status(info, text)
         gpu.setBackground(bg)
         io.write("   ")
         print(_msg);
+        print("")
     end
 
 
